@@ -50,9 +50,10 @@ func getDP(t *testing.T) Protocol {
 }
 
 type listTest struct {
-	name string
-	path string
-	tags []string
+	name        string
+	path        string
+	tags        []string
+	networkmode string
 }
 
 var listTests = []listTest{
@@ -65,6 +66,12 @@ var listTests = []listTest{
 		name: "no tags",
 		path: "github.com/athens-artifacts/no-tags",
 		tags: []string{},
+	},
+	{
+		name:        "no tags",
+		path:        "github.com/athens-artifacts/happy-path",
+		tags:        []string{},
+		networkmode: "offline",
 	},
 }
 

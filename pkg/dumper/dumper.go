@@ -16,15 +16,15 @@ import (
 
 // DumpModules gets the modules that are referenced in go.mod, and packages them to a tar.gz file
 func DumpModules(ctx context.Context, goModDir, outDir string) error {
-	const op errors.Op = "pack.DumpModules"
+	const op errors.Op = "dumper.DumpModules"
 	numOfWorkers := 4
 
-	fs := afero.NewOsFs()
-	tempDir, err := afero.TempDir(fs, "", "athens_dump")
+	Fs := afero.NewOsFs()
+	tempDir, err := afero.TempDir(Fs, "", "athens_dump")
 	if err != nil {
 		return errors.E(op, err)
 	}
-	defer fs.RemoveAll(tempDir)
+	defer Fs.RemoveAll(tempDir)
 
 	goModDir, err = filepath.Abs(goModDir)
 	if err != nil {
@@ -44,7 +44,7 @@ func DumpModules(ctx context.Context, goModDir, outDir string) error {
 	errs, ctx := errgroup.WithContext(ctx)
 
 	for _, m := range modfile.GetModules() {
-		func (path, version string) {
+		func(path, version string) {
 			log.Printf("fetching %s@%s\n", path, version)
 			errs.Go(func() error {
 				if _, err := st.Stash(ctx, m.Path, m.Version); err != nil {
@@ -54,7 +54,7 @@ func DumpModules(ctx context.Context, goModDir, outDir string) error {
 				log.Printf("successfully fetched %s@%s\n", path, version)
 				return nil
 			})
-		} (m.Path, m.Version)
+		}(m.Path, m.Version)
 	}
 
 	if err := errs.Wait(); err != nil {

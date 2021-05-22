@@ -27,7 +27,7 @@ func compress(src, dst string) error {
 			return err
 		}
 
-		header.Name = filepath.ToSlash(strings.Replace(file, "/tmp", "", 1))
+		header.Name = filepath.ToSlash(strings.TrimPrefix(file, "/tmp/"))
 
 		if err := tw.WriteHeader(header); err != nil {
 			return err
@@ -54,7 +54,7 @@ func compress(src, dst string) error {
 		return err
 	}
 
-	fileName := fmt.Sprintf("%s.tar.gz", strings.Replace(src, "/tmp", "", 1))
+	fileName := fmt.Sprintf("%s.tar.gz", strings.TrimPrefix(src, "/tmp/"))
 	dst, err := filepath.Abs(path.Join(dst, fileName))
 	if err != nil {
 		return err

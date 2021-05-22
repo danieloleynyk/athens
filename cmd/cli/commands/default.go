@@ -2,6 +2,11 @@ package commands
 
 import "github.com/spf13/cobra"
 
+var (
+	configDir     string
+	ConfigDirFlag = "config"
+)
+
 // NewDefaultCommand creates a new default command for when
 // the user does not provide a command
 func NewDefaultCommand() *cobra.Command {
@@ -11,6 +16,7 @@ func NewDefaultCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(NewDumpCommand())
+	cmd.AddCommand(NewLoadCommand())
 
 	return &cmd
 }

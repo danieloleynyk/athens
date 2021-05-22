@@ -39,7 +39,7 @@ func NewLoadCommand() *cobra.Command {
 		&configDir,
 		ConfigDirFlag,
 		"c",
-		"~/.config/athens.toml",
+		"",
 		"athens config directory",
 	)
 

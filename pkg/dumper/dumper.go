@@ -2,22 +2,22 @@ package dumper
 
 import (
 	"context"
+	"github.com/gomods/athens/pkg/config"
 	"github.com/gomods/athens/pkg/errors"
 	"github.com/gomods/athens/pkg/index/mem"
+	"github.com/gomods/athens/pkg/log"
 	"github.com/gomods/athens/pkg/module"
 	"github.com/gomods/athens/pkg/stash"
 	"github.com/gomods/athens/pkg/storage/fs"
 	"github.com/spf13/afero"
 	"golang.org/x/sync/errgroup"
-	"log"
 	"os"
 	"path/filepath"
 )
 
 // DumpModules gets the modules that are referenced in go.mod, and packages them to a tar.gz file
-func DumpModules(ctx context.Context, goModDir, outDir string) error {
+func DumpModules(ctx context.Context, goModDir, outDir string, cfg *config.Config, lggr *log.Logger) error {
 	const op errors.Op = "dumper.DumpModules"
-	numOfWorkers := 4
 
 	Fs := afero.NewOsFs()
 	tempDir, err := afero.TempDir(Fs, "", "athens_dump")
@@ -36,7 +36,7 @@ func DumpModules(ctx context.Context, goModDir, outDir string) error {
 		return errors.E(op, "failed parsing go.mod file", err)
 	}
 
-	st, err := initializeStasher(tempDir, numOfWorkers)
+	st, err := initializeStasher(tempDir, cfg)
 	if err != nil {
 		return errors.E(op, "failed initializing stasher", err)
 	}
@@ -45,31 +45,31 @@ func DumpModules(ctx context.Context, goModDir, outDir string) error {
 
 	for _, m := range modfile.GetModules() {
 		func(path, version string) {
-			log.Printf("fetching %s@%s\n", path, version)
+			lggr.Printf("fetching %s@%s", path, version)
 			errs.Go(func() error {
 				if _, err := st.Stash(ctx, m.Path, m.Version); err != nil {
 					return err
 				}
 
-				log.Printf("successfully fetched %s@%s\n", path, version)
+				lggr.Printf("successfully fetched %s@%s", path, version)
 				return nil
 			})
 		}(m.Path, m.Version)
 	}
 
 	if err := errs.Wait(); err != nil {
-		log.Println(err)
+		lggr.Println(err)
 		return err
 	}
 
-	log.Println("successfully fetched all modules")
+	lggr.Println("successfully fetched all modules")
 	if err := compress(tempDir, outDir); err != nil {
 		return err
 	}
 	return nil
 }
 
-func initializeStasher(storageDir string, numOfWorkers int) (stash.Stasher, error) {
+func initializeStasher(storageDir string, cfg *config.Config) (stash.Stasher, error) {
 	const op errors.Op = "pack.initializeStasher"
 
 	storageDir, err := filepath.Abs(storageDir)
@@ -87,11 +87,11 @@ func initializeStasher(storageDir string, numOfWorkers int) (stash.Stasher, erro
 		return nil, errors.E(op, "failed initializing backend storage: ", err)
 	}
 
-	f, err := module.NewGoGetFetcher("/usr/bin/go", "", nil, afs)
+	f, err := module.NewGoGetFetcher(cfg.GoBinary, "", nil, afs)
 	if err != nil {
 		return nil, errors.E(op, "failed initializing fetcher: ", err)
 	}
 
 	indexer := mem.New()
-	return stash.New(f, s, indexer, stash.WithPool(numOfWorkers)), nil
+	return stash.New(f, s, indexer, stash.WithPool(cfg.GoGetWorkers)), nil
 }

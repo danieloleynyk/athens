@@ -63,6 +63,7 @@ func LoadModules(ctx context.Context, srcDir string, store storage.Backend, lgge
 	}
 
 	for moduleName, moduleInfo := range modules {
+		lgger.Printf("saving %s...", moduleName)
 		if err := loadModule(ctx, store, moduleName, moduleInfo); err != nil {
 			return err
 		}
@@ -93,5 +94,10 @@ func loadModule(ctx context.Context, store storage.Backend, moduleName string, m
 		return errors.E(op, "failed loading moduleInfo file", err)
 	}
 
-	return store.Save(ctx, moduleName, moduleInfo.version, goModFile, zip, info)
+	err = store.Save(ctx, moduleName, moduleInfo.version, goModFile, zip, info)
+	if err != nil && !errors.Is(err, 409) {
+		return err
+	}
+
+	return nil
 }

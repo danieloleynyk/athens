@@ -273,7 +273,7 @@ DownloadMode = "sync"
 # 3. fallback: only return storage versions, if VCS fails. Note this means that you may
 # see inconsistent results since fallback mode does a best effort of giving you what's
 # available at the time of requesting versions.
-NetworkMode = "strict"
+NetworkMode = "offline"
 
 # DownloadURL is the URL that will be used if
 # DownloadMode is set to "redirect"
@@ -329,7 +329,7 @@ IndexType = "none"
         # Env override: ATHENS_REDIS_PASSWORD
         Password = ""
     [SingleFlight.RedisSentinel]
-        # Endpoints is the redis sentinel endpoints to discover a redis 
+        # Endpoints is the redis sentinel endpoints to discover a redis
         # master for a SingleFlight lock.
         # Env override: ATHENS_REDIS_SENTINEL_ENDPOINTS
         Endpoints = ["127.0.0.1:26379"]
@@ -366,11 +366,11 @@ IndexType = "none"
         # Env override: ATHENS_STORAGE_GCP_BUCKET
         Bucket = "MY_GCP_BUCKET"
 
-        # JSONKey is a base64 encoded service account 
+        # JSONKey is a base64 encoded service account
         # key that allows Athens to be run outside of GCP
         # but still be able to access GCS. This is not needed
-        # when relying on default GCP authentication with 
-        # GOOGLE_APPLICATION_CREDENTIALS variable set up. 
+        # when relying on default GCP authentication with
+        # GOOGLE_APPLICATION_CREDENTIALS variable set up.
         # See https://cloud.google.com/docs/authentication/getting-started.
         #
         # Env override: ATHENS_STORAGE_GCP_JSON_KEY

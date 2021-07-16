@@ -270,7 +270,9 @@ DownloadMode = "sync"
 # Modes:
 # 1. strict: merge VCS versions with storage versions, but fail if either of them fails.
 # 2. offline: only get storage versions, never reach out to VCS.
-# 3. fallback: only return storage versions, if VCS fails.
+# 3. fallback: only return storage versions, if VCS fails. Note this means that you may
+# see inconsistent results since fallback mode does a best effort of giving you what's
+# available at the time of requesting versions.
 NetworkMode = "strict"
 
 # DownloadURL is the URL that will be used if
@@ -366,10 +368,10 @@ IndexType = "none"
 
         # JSONKey is a base64 encoded service account 
         # key that allows Athens to be run outside of GCP
-        # but still be able to access GCS. If you are
-        # running Athens inside GCP, you will most
-        # likely not need this as GCP figures out
-        # internal authentication between products for you.
+        # but still be able to access GCS. This is not needed
+        # when relying on default GCP authentication with 
+        # GOOGLE_APPLICATION_CREDENTIALS variable set up. 
+        # See https://cloud.google.com/docs/authentication/getting-started.
         #
         # Env override: ATHENS_STORAGE_GCP_JSON_KEY
         JSONKey = ""

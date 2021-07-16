@@ -42,7 +42,7 @@ func LoadModules(ctx context.Context, srcDir string, store storage.Backend, lgge
 			return errors.E(op, "vcs:listDirs failed", err)
 		}
 
-		filepath.Walk(dumpDir, func(path string, info fs.FileInfo, err error) error {
+		if err := afero.Walk(Fs, dumpDir, func(path string, info fs.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -59,7 +59,9 @@ func LoadModules(ctx context.Context, srcDir string, store storage.Backend, lgge
 			}
 
 			return nil
-		})
+		}); err != nil {
+			return errors.E(op, err, errors.KindUnexpected)
+		}
 	}
 
 	for moduleName, moduleInfo := range modules {

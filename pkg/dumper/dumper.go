@@ -43,23 +43,41 @@ func DumpModules(ctx context.Context, goModDir, outDir string, cfg *config.Confi
 
 	errs, ctx := errgroup.WithContext(ctx)
 
-	for _, m := range modfile.GetModules() {
+	fetchedTotal := 0
+	failedTotal := 0
+	modules := modfile.GetModules()
+	for _, m := range modules {
 		func(path, version string) {
 			lggr.Printf("fetching %s@%s", path, version)
 			errs.Go(func() error {
-				if _, err := st.Stash(ctx, m.Path, m.Version); err != nil {
+				try := 0
+				numOfTries := 5
+				success := false
+
+				for !success && try < numOfTries {
+					if _, err := st.Stash(ctx, path, version); err != nil {
+						lggr.Warnf("retrying fetching %s@%s", path, version)
+						try++
+					} else {
+						success = true
+					}
+				}
+
+				if !success {
+					failedTotal++
+					lggr.Errorf("failed fetching %s@%s {%v} (%d/%d)", path, version, err, failedTotal, len(modules))
 					return err
 				}
 
-				lggr.Printf("successfully fetched %s@%s", path, version)
+				fetchedTotal++
+				lggr.Printf("successfully fetched %s@%s (%d/%d)", path, version, fetchedTotal, len(modules))
 				return nil
 			})
 		}(m.Path, m.Version)
 	}
 
 	if err := errs.Wait(); err != nil {
-		lggr.Println(err)
-		return err
+		lggr.Errorf("an error occurred during fetch, continuing...")
 	}
 
 	lggr.Println("successfully fetched all modules")

@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/spf13/afero"
 	"io"
 	"os"
 	"path"
@@ -15,11 +16,12 @@ import (
 func compress(src, dst string) error {
 	var buf bytes.Buffer
 
+	Fs := afero.NewOsFs()
 	zr := gzip.NewWriter(io.Writer(&buf))
 	tw := tar.NewWriter(zr)
 
 	// walk through every file in the folder
-	filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+	afero.Walk(Fs, src, func(file string, fi os.FileInfo, err error) error {
 
 		// generate tar header
 		header, err := tar.FileInfoHeader(fi, file)

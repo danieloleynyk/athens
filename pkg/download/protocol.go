@@ -180,11 +180,7 @@ func (p *protocol) Latest(ctx context.Context, mod string) (*storage.RevInfo, er
 	const op errors.Op = "protocol.Latest"
 	ctx, span := observ.StartSpan(ctx, op.String())
 	defer span.End()
-	if p.networkMode == Offline {
-		// Go never pings the /@latest endpoint _first_. It always tries /list and if that
-		// endpoint returns an empty list then it fallsback to calling /@latest.
-		return nil, errors.E(op, "Athens is in offline mode, use /list endpoint", errors.KindNotFound)
-	}
+
 	lr, _, err := p.lister.List(ctx, mod)
 	if err != nil {
 		return nil, errors.E(op, err)

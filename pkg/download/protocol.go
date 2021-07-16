@@ -42,7 +42,7 @@ type Opts struct {
 	Stasher      stash.Stasher
 	Lister       module.UpstreamLister
 	DownloadFile *mode.DownloadFile
-	// NetworkMode  string
+	NetworkMode  string
 }
 
 // NetworkMode constants
@@ -61,7 +61,7 @@ func New(opts *Opts, wrappers ...Wrapper) Protocol {
 	if opts.DownloadFile == nil {
 		opts.DownloadFile = &mode.DownloadFile{Mode: mode.Sync}
 	}
-	var p Protocol = &protocol{opts.DownloadFile, opts.Storage, opts.Stasher, opts.Lister, "TODO"}
+	var p Protocol = &protocol{opts.DownloadFile, opts.Storage, opts.Stasher, opts.Lister, opts.NetworkMode}
 	for _, w := range wrappers {
 		p = w(p)
 	}
@@ -87,7 +87,7 @@ func (p *protocol) List(ctx context.Context, mod string) ([]string, error) {
 	var wg sync.WaitGroup
 
 	/*
-		TODO: refactor
+		TODO: potential refactor:
 
 		Storage Lister: just return stuff from storage, or error otherwise.
 
@@ -181,7 +181,9 @@ func (p *protocol) Latest(ctx context.Context, mod string) (*storage.RevInfo, er
 	ctx, span := observ.StartSpan(ctx, op.String())
 	defer span.End()
 	if p.networkMode == Offline {
-		return nil, errors.E(op, "Athens is in offline mode", errors.KindNotFound)
+		// Go never pings the /@latest endpoint _first_. It always tries /list and if that
+		// endpoint returns an empty list then it fallsback to calling /@latest.
+		return nil, errors.E(op, "Athens is in offline mode, use /list endpoint", errors.KindNotFound)
 	}
 	lr, _, err := p.lister.List(ctx, mod)
 	if err != nil {

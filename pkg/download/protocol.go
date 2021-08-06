@@ -2,16 +2,18 @@ package download
 
 import (
 	"context"
-	"regexp"
-	"strings"
-	"sync"
-
+	"encoding/json"
+	"fmt"
 	"github.com/gomods/athens/pkg/download/mode"
 	"github.com/gomods/athens/pkg/errors"
 	"github.com/gomods/athens/pkg/module"
 	"github.com/gomods/athens/pkg/observ"
 	"github.com/gomods/athens/pkg/stash"
 	"github.com/gomods/athens/pkg/storage"
+	"regexp"
+	"sort"
+	"strings"
+	"sync"
 )
 
 // Protocol is the download protocol which mirrors
@@ -162,24 +164,44 @@ func (p *protocol) List(ctx context.Context, mod string) ([]string, error) {
 	return union(goList, strListSemVers), nil
 }
 
-var pseudoVersionRE = regexp.MustCompile(`^v[0-9]+\.(0\.0-|\d+\.\d+-([^+]*\.)?0\.)\d{14}-[A-Za-z0-9]+(\+incompatible)?$`)
-
-func removePseudoVersions(allVersions []string) []string {
-	var vers []string
-	for _, v := range allVersions {
-		// copied from go cmd https://github.com/golang/go/blob/master/src/cmd/go/internal/modfetch/pseudo.go#L93
-		isPseudoVersion := strings.Count(v, "-") >= 2 && pseudoVersionRE.MatchString(v)
-		if !isPseudoVersion {
-			vers = append(vers, v)
-		}
-	}
-	return vers
-}
-
 func (p *protocol) Latest(ctx context.Context, mod string) (*storage.RevInfo, error) {
 	const op errors.Op = "protocol.Latest"
 	ctx, span := observ.StartSpan(ctx, op.String())
 	defer span.End()
+
+	if p.networkMode == Offline {
+		verList, err := p.storage.List(ctx, mod)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(verList) == 0 {
+			return nil, errors.E(op, fmt.Sprintf("no matching version for module %s", mod))
+		}
+
+		verInfoList := make([]storage.RevInfo, 0, len(verList))
+
+		for _, ver := range verList {
+			tmp := storage.RevInfo{}
+
+			verInfoBytes, err := p.storage.Info(ctx, mod, ver)
+			if err != nil {
+				return nil, errors.E(op, err, fmt.Sprintf("failed retrieving %s/%s.info", mod, ver))
+			}
+
+			if err := json.Unmarshal(verInfoBytes, &tmp); err != nil {
+				return nil, errors.E(op, fmt.Sprintf("failed parsing %s.info for module %s", ver, mod))
+			}
+
+			verInfoList = append(verInfoList, tmp)
+		}
+
+		sort.Slice(verInfoList, func(i, j int) bool {
+			return verInfoList[i].Time.After(verInfoList[j].Time)
+		})
+
+		return &verInfoList[0], nil
+	}
 
 	lr, _, err := p.lister.List(ctx, mod)
 	if err != nil {
@@ -283,4 +305,18 @@ func union(list1, list2 []string) []string {
 		}
 	}
 	return unique
+}
+
+var pseudoVersionRE = regexp.MustCompile(`^v[0-9]+\.(0\.0-|\d+\.\d+-([^+]*\.)?0\.)\d{14}-[A-Za-z0-9]+(\+incompatible)?$`)
+
+func removePseudoVersions(allVersions []string) []string {
+	var vers []string
+	for _, v := range allVersions {
+		// copied from go cmd https://github.com/golang/go/blob/master/src/cmd/go/internal/modfetch/pseudo.go#L93
+		isPseudoVersion := strings.Count(v, "-") >= 2 && pseudoVersionRE.MatchString(v)
+		if !isPseudoVersion {
+			vers = append(vers, v)
+		}
+	}
+	return vers
 }

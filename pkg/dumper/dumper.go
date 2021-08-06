@@ -77,10 +77,10 @@ func DumpModules(ctx context.Context, goModDir, outDir string, cfg *config.Confi
 	}
 
 	if err := errs.Wait(); err != nil {
-		lggr.Errorf("an error occurred during fetch, continuing...")
+		lggr.Warnf("an error occurred during fetch, continuing...")
 	}
 
-	lggr.Println("successfully fetched all modules")
+	lggr.Infof("finished fetching modules, compressing...")
 	if err := compress(tempDir, outDir); err != nil {
 		return err
 	}
